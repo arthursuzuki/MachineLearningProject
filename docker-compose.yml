@@ -1,0 +1,71 @@
+version: '3.9'
+
+services:
+  fastapi:
+    build: ./fastapi
+    ports:
+      - "8000:8000"
+    environment:
+      - MINIO_URL=http://minio:9000
+    depends_on:
+      - minio
+
+  postgres:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_DB: trendz
+      POSTGRES_USER: trendz
+      POSTGRES_PASSWORD: trendz
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio
+    command: server /data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin123
+    volumes:
+      - minio_data:/data
+
+  jupyterlab:
+    build: ./jupyterlab
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+    depends_on:
+      - minio
+
+  mlflow:
+    build: ./mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlflow:/mlflow
+
+  trendz:
+    image: thingsboard/trendz
+    container_name: machinelearningproject-trendz-1
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      TB_LICENSE_SECRET: "trendz-development-secret"
+      DB_URL: jdbc:postgresql://postgres:5432/trendz
+      DB_USERNAME: trendz
+      DB_PASSWORD: trendz
+    ports:
+      - "8889:8888"
+
+
+  
+volumes:
+  postgres_data:
+  minio_data:
